@@ -93,6 +93,7 @@ jobs:
           # 💡 Required so the internal verification script can sign/verify local metadata via Cosign
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          cosign-identity: "https://github.com/crazyrokr/gha-workflows/.github/workflows/ha-addon-build.yaml@.*"
           arch: ${{ matrix.arch }}
           container-registry-password: ${{ secrets.GITHUB_TOKEN }}
           context: "./${{ inputs.app }}"
