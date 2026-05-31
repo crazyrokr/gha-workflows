@@ -1,0 +1,80 @@
+name: 'Auto-Lock Images'
+description: 'Pins docker images to digests across build.yaml files'
+
+inputs:
+  branch:
+    description: "Branch to analyze and lock"
+    required: false
+    default: ""
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Determine Branch
+      id: branch-name
+      shell: bash
+      run: |
+        # Check explicit input, fallback to head_ref (PRs), fallback to ref_name
+        BRANCH="${{ inputs.branch }}"
+        if [ -z "$BRANCH" ]; then
+          BRANCH="${{ github.head_ref }}"
+        fi
+        if [ -z "$BRANCH" ]; then
+          BRANCH="${{ github.ref_name }}"
+        fi
+        echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ steps.branch-name.outputs.branch }}
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Cache apt packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          /var/cache/apt/archives
+          /var/lib/apt/lists
+        # Note: Changed hashFiles to look relative to the action directory
+        key: ${{ runner.os }}-apt-skopeo-${{ hashFiles(format('{0}/action.yml', github.action_path)) }}
+        restore-keys: |
+          ${{ runner.os }}-apt-
+
+    - name: Install Skopeo
+      shell: bash
+      run: |
+        if ! command -v skopeo &> /dev/null; then
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+        else
+          echo "Skopeo is already installed: $(skopeo --version)"
+        fi
+
+    - name: Run Locker Script
+      shell: bash
+      # Crucial fix: References the script inside the downloaded action directory
+      run: python3 ${{ github.action_path }}/lock.py
+
+    - name: Pull and Check for changes
+      id: git-check
+      shell: bash
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Commit and Push changes
+      if: steps.git-check.outputs.changed == 'true'
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        branch: ${{ steps.branch-name.outputs.branch }}
+        commit_message: "pin docker digests in build.yaml"
+        file_pattern: "**/build.yaml docker-lock.json"
