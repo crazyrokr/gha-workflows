@@ -89,6 +89,9 @@ jobs:
 
       - name: Build image
         uses: home-assistant/builder/actions/build-image@2026.03.2
+        env:
+          # 💡 Required so the internal verification script can sign/verify local metadata via Cosign
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           arch: ${{ matrix.arch }}
           container-registry-password: ${{ secrets.GITHUB_TOKEN }}
