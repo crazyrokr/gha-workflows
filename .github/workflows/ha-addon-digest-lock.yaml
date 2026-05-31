@@ -5,6 +5,7 @@ on:
     inputs:
       branch:
         description: "Branch to analyze and lock"
+        type: string
         required: false
         default: ""
 
