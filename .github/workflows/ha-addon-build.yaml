@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       architectures: ${{ steps.info.outputs.architectures }}
-      build_matrix: ${{ steps.matrix.outputs.matrix }}
+      build_matrix: ${{ steps.custom-matrix.outputs.matrix }}
       image_name: ${{ steps.normalize.outputs.image_name }}
       name: ${{ steps.normalize.outputs.name }}
       description: ${{ steps.normalize.outputs.description }}
@@ -58,6 +58,17 @@ jobs:
           architectures: ${{ steps.info.outputs.architectures }}
           image-name: ${{ steps.normalize.outputs.image_name }}
           registry-prefix: ${{ steps.normalize.outputs.registry_prefix }}
+
+      - name: Inject build_from into Matrix
+        id: custom-matrix
+        shell: bash
+        run: |
+          RAW_MATRIX='${{ steps.matrix.outputs.matrix }}'
+          BUILD_YAML="./${{ inputs.app }}/build.yaml"
+          BUILD_FROM_JSON=$(yq -o=json eval '.build_from' "$BUILD_YAML")
+          FINAL_MATRIX=$(jq -c --argjson bf "$BUILD_FROM_JSON" \
+            '.include |= map(. + {build_from: $bf[.arch]})' <<< "$RAW_MATRIX")
+          echo "matrix=${FINAL_MATRIX}" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build ${{ matrix.arch }} image
