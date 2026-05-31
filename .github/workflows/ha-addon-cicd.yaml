@@ -78,4 +78,5 @@ jobs:
     with:
       app: ${{ matrix.app }}
       publish: ${{ github.event_name == 'push' }}
-    secrets: inherit
+    secrets:
+      DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
