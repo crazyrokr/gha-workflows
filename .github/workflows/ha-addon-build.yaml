@@ -16,7 +16,7 @@ on:
 jobs:
   prepare:
     name: Prepare
-    if: ${{ github.repository_owner }} == 'crazyrokr'
+    if: ${{ github.repository_owner == 'crazyrokr' }}
     runs-on: ubuntu-latest
     outputs:
       architectures: ${{ steps.info.outputs.architectures }}
