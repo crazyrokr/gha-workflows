@@ -100,6 +100,8 @@ jobs:
           image-tags: |
             ${{ needs.prepare.outputs.version }}
             latest
+          build-args: |
+            BUILD_FROM=${{ matrix.build_from }}
           labels: |
             io.hass.type=app
             io.hass.name=${{ needs.prepare.outputs.name }}
@@ -119,6 +121,9 @@ jobs:
     steps:
       - name: Publish multi-arch manifest
         uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.03.2
+        env:
+          # 💡 Required so the internal verification script can sign/verify local metadata via Cosign
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           architectures: ${{ needs.prepare.outputs.architectures }}
           container-registry-password: ${{ secrets.GITHUB_TOKEN }}
