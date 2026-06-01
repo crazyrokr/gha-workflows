@@ -6,6 +6,10 @@ inputs:
     description: "Branch to analyze and lock"
     required: false
     default: ""
+  lookup_sources:
+    description: "Files containing candidates to lock"
+    required: false
+    default: "build.yaml Dockerfile"
 
 runs:
   using: 'composite'
@@ -46,8 +50,7 @@ runs:
 
     - name: Run Locker Script
       shell: bash
-      # Crucial fix: References the script inside the downloaded action directory
-      run: python3 ${{ github.action_path }}/lock.py
+      run: python3 ${{ github.action_path }}/lock.py ${{ inputs.lookup_sources }}
 
     - name: Pull and Check for changes
       id: git-check

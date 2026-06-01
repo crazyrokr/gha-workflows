@@ -2,8 +2,11 @@ import os
 import re
 import subprocess
 import json
+import argparse  # Added for CLI argument handling
+import sys
 
-MONITOR_FILES = ['build.yaml', 'Dockerfile']
+# Default files if no input arguments are provided
+DEFAULT_MONITOR_FILES = ['build.yaml', 'Dockerfile']
 LOCK_FILE = "docker-lock.json"
 
 ARCH_MAP = {
@@ -105,7 +108,21 @@ def lock_build_yaml(file_path, lock_data):
         return False
 
 def main():
-    import sys
+    # Set up CLI Argument Parsing
+    parser = argparse.ArgumentParser(description="Scan and lock Docker base images in specified configuration files.")
+    parser.add_argument(
+        'monitor_files',
+        metavar='FILE',
+        type=str,
+        nargs='*',  # Accepts 0 or more files
+        default=DEFAULT_MONITOR_FILES,
+        help='Target filenames to scan for and process (e.g., build.yaml Dockerfile)'
+    )
+    args = parser.parse_args()
+    
+    # Use the arguments passed by the user
+    monitor_files = args.monitor_files
+
     lock_data = {}
     original_lock_data = {}
     if os.path.exists(LOCK_FILE):
@@ -113,11 +130,11 @@ def main():
             lock_data = json.load(f)
             original_lock_data = json.loads(json.dumps(lock_data)) # Deep copy
 
-    # Find all build.yaml files
+    # Find all matching files
     any_yaml_changed = False
     has_errors = False
     for root, dirs, files in os.walk('.'):
-        for target in MONITOR_FILES:
+        for target in monitor_files:
             if target in files:
                 file_path = os.path.join(root, target)
                 print(f"Processing {file_path}...")
