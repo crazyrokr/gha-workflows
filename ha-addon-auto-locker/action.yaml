@@ -25,33 +25,21 @@ runs:
         echo "branch=$BRANCH" >> $GITHUB_OUTPUT
 
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: ${{ steps.branch-name.outputs.branch }}
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.x'
-
-    - name: Cache apt packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          /var/cache/apt/archives
-          /var/lib/apt/lists
-        # Note: Changed hashFiles to look relative to the action directory
-        key: ${{ runner.os }}-apt-skopeo-${{ hashFiles(format('{0}/action.yml', github.action_path)) }}
-        restore-keys: |
-          ${{ runner.os }}-apt-
 
     - name: Install Skopeo
       shell: bash
       run: |
         if ! command -v skopeo &> /dev/null; then
-          sudo apt-get update
-          sudo apt-get install -y skopeo
+          sudo apt-get update && sudo apt-get install -y skopeo
         else
           echo "Skopeo is already installed: $(skopeo --version)"
         fi
