@@ -52,9 +52,7 @@ runs:
       id: locker
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/lock.py ${{ inputs.lookup_sources }} | tee /dev/stderr > result.txt
-        LOCKED_FILES=$(tail -n 1 result.txt)
-        cat ./obsidian/Dockerfile
+        LOCKED_FILES=$(python3 ${{ github.action_path }}/lock.py ${{ inputs.lookup_sources }} | tee /dev/stderr | tail -n 1)
         echo "locked_files=$LOCKED_FILES" >> $GITHUB_OUTPUT
 
     - name: Pull and Check for changes
