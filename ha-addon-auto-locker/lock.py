@@ -49,7 +49,7 @@ def lock_build_yaml(file_path, lock_data):
 
     # Regex to find architecture-specific images in build.yaml
     # Matches:   amd64: "image:tag"
-    pattern = re.compile(r'(\s+)(\w+):\s+"([^"@]+)(?::([^"@]+))?(@sha256:[a-f0-9]+)?"')
+    pattern = re.compile(r'(\s*)(\w+):*\s+"*([^"@]+)(?::([^"@]+))?(@sha256:[a-f0-9]+)?"*')
     
     new_content = content
     changes_made = False
