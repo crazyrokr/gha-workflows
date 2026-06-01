@@ -2,8 +2,11 @@ import os
 import re
 import subprocess
 import json
+import argparse
+import sys
 
-LOCK_FILE = "docker-lock.json"
+DEFAULT_MONITOR_FILES = ['build.yaml', 'Dockerfile']
+LOCK_FILE = ".github/docker-lock.json"
 
 ARCH_MAP = {
     "aarch64": "arm64",
@@ -43,9 +46,10 @@ def lock_build_yaml(file_path, lock_data):
     with open(file_path, 'r') as f:
         content = f.read()
 
-    # Regex to find architecture-specific images in build.yaml
-    # Matches:   amd64: "image:tag"
-    pattern = re.compile(r'(\s+)(\w+):\s+"([^"@]+)(?::([^"@]+))?(@sha256:[a-f0-9]+)?"')
+    # Regex to find architecture-specific images in build.yaml and Dockerfile
+    # Matches: ' amd64: "image:tag"'
+    #          'FROM repo/image:tag'
+    pattern = re.compile(r'^([\t ]*)(\w+)[:\t ]+"?([^"@\s]+/[^:"\s@]*)(?::([^"@\s]+))?(@sha256:[a-f0-9]+)?"?\r?$', flags=re.M)
     
     new_content = content
     changes_made = False
@@ -77,16 +81,16 @@ def lock_build_yaml(file_path, lock_data):
                 lock_data[full_ref] = clean_digest
                 continue
             else:
-                print(f"  Updating {arch} pin from {clean_digest} to {digest}")
-                old_str = f'"{full_ref}@{clean_digest}"'
-                new_str = f'"{full_ref}@{digest}"'
+                print(f"  Updating {full_ref} pin from {clean_digest} to {digest}")
+                old_str = f'{full_ref}@{clean_digest}'
+                new_str = f'{full_ref}@{digest}'
                 new_content = new_content.replace(old_str, new_str)
                 lock_data[full_ref] = digest
                 changes_made = True
         else:
-            # Replace image:tag with image:tag@sha256:digest
-            old_str = f'"{full_ref}"'
-            new_str = f'"{full_ref}@{digest}"'
+            print(f"  Pinning {full_ref} with {digest}")
+            old_str = f'{full_ref}'
+            new_str = f'{full_ref}@{digest}'
             new_content = new_content.replace(old_str, new_str)
             lock_data[full_ref] = digest
             changes_made = True
@@ -104,7 +108,17 @@ def lock_build_yaml(file_path, lock_data):
         return False
 
 def main():
-    import sys
+    parser = argparse.ArgumentParser(description="Scan and lock Docker base images in specified configuration files.")
+    parser.add_argument(
+        'monitor_files',
+        metavar='FILE',
+        type=str,
+        nargs='*',  # Accepts 0 or more files
+        default=DEFAULT_MONITOR_FILES,
+        help='Target filenames to scan for and process (e.g., build.yaml Dockerfile)'
+    )
+    args = parser.parse_args()
+
     lock_data = {}
     original_lock_data = {}
     if os.path.exists(LOCK_FILE):
@@ -112,26 +126,27 @@ def main():
             lock_data = json.load(f)
             original_lock_data = json.loads(json.dumps(lock_data)) # Deep copy
 
-    # Find all build.yaml files
     any_yaml_changed = False
     has_errors = False
+    locked_files = []
     for root, dirs, files in os.walk('.'):
-        if 'build.yaml' in files:
-            file_path = os.path.join(root, 'build.yaml')
-            print(f"Processing {file_path}...")
-            try:
-                if lock_build_yaml(file_path, lock_data):
-                    any_yaml_changed = True
-            except RuntimeError as e:
-                print(f"Error processing {file_path}: {e}")
-                has_errors = True
+        for target in args.monitor_files:
+            if target in files:
+                file_path = os.path.join(root, target)
+                print(f"Processing {file_path}...")
+                try:
+                    if lock_build_yaml(file_path, lock_data):
+                        any_yaml_changed = True
+                        locked_files.append(file_path)
+                except RuntimeError as e:
+                    print(f"Error processing {file_path}: {e}")
+                    has_errors = True
 
-    # Only save the central lock file if data actually changed
     if lock_data != original_lock_data or any_yaml_changed:
         with open(LOCK_FILE, 'w') as f:
             json.dump(lock_data, f, indent=2, sort_keys=True)
         print(f"Updated {LOCK_FILE}")
-
+    print(' '.join(locked_files))
     if has_errors:
         print("Build locking failed with errors.")
         sys.exit(1)

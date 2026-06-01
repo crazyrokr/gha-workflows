@@ -6,6 +6,10 @@ inputs:
     description: "Branch to analyze and lock"
     required: false
     default: ""
+  lookup_sources:
+    description: "Files containing candidates to lock"
+    required: false
+    default: "build.yaml Dockerfile"
 
 runs:
   using: 'composite'
@@ -45,9 +49,12 @@ runs:
         fi
 
     - name: Run Locker Script
+      id: locker
       shell: bash
-      # Crucial fix: References the script inside the downloaded action directory
-      run: python3 ${{ github.action_path }}/lock.py
+      run: |
+        LOCKED_FILES=$(python3 ${{ github.action_path }}/lock.py ${{ inputs.lookup_sources }} | tee /dev/stderr | tail -n 1)
+        echo >> .github/docker-lock.json
+        echo "locked_files=$LOCKED_FILES" >> $GITHUB_OUTPUT
 
     - name: Pull and Check for changes
       id: git-check
@@ -61,8 +68,8 @@ runs:
 
     - name: Commit and Push changes
       if: steps.git-check.outputs.changed == 'true'
-      uses: stefanzweifel/git-auto-commit-action@v5
+      uses: stefanzweifel/git-auto-commit-action@v7
       with:
         branch: ${{ steps.branch-name.outputs.branch }}
-        commit_message: "pin docker digests in build.yaml"
-        file_pattern: "**/build.yaml docker-lock.json"
+        commit_message: "digests' pinnig in ${{ steps.locker.outputs.locked_files }}"
+        file_pattern: "${{ steps.locker.outputs.locked_files }} .github/docker-lock.json"
