@@ -97,7 +97,7 @@ def lock_build_yaml(file_path, lock_data):
             changes_made = True
 
     if errors:
-        print("\n".join(errors))
+        print("\n".join(errors), file=sys.stderr)
         return False
 
     if changes_made:
