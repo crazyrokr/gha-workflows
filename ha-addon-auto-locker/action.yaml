@@ -41,6 +41,10 @@ runs:
         path: |
           /var/cache/apt/archives
           /var/lib/apt/lists
+          !/var/cache/apt/archives/lock
+          !/var/cache/apt/archives/partial
+          !/var/lib/apt/lists/lock
+          !/var/lib/apt/lists/partial
         # Note: Changed hashFiles to look relative to the action directory
         key: ${{ runner.os }}-apt-skopeo-${{ hashFiles(format('{0}/action.yml', github.action_path)) }}
         restore-keys: |
