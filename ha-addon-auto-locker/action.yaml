@@ -49,8 +49,11 @@ runs:
         fi
 
     - name: Run Locker Script
+      id: locker
       shell: bash
-      run: python3 ${{ github.action_path }}/lock.py ${{ inputs.lookup_sources }}
+      run: |
+        LOCKED_FILES=$(python3 ${{ github.action_path }}/lock.py ${{ inputs.lookup_sources }} | tail -n 1)
+        echo "locked_files=$LOCKED_FILES" >> $GITHUB_OUTPUT
 
     - name: Pull and Check for changes
       id: git-check
@@ -68,4 +71,4 @@ runs:
       with:
         branch: ${{ steps.branch-name.outputs.branch }}
         commit_message: "pin docker digests in build.yaml"
-        file_pattern: "**/build.yaml docker-lock.json"
+        file_pattern: "${{ steps.locker.outputs.locked_files }} docker-lock.json"

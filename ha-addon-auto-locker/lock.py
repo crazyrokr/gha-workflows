@@ -134,6 +134,7 @@ def main():
     # Find all matching files
     any_yaml_changed = False
     has_errors = False
+    locked_files = []
     for root, dirs, files in os.walk('.'):
         for target in monitor_files:
             if target in files:
@@ -142,6 +143,7 @@ def main():
                 try:
                     if lock_build_yaml(file_path, lock_data):
                         any_yaml_changed = True
+                        locked_files.append(file_path)
                 except RuntimeError as e:
                     print(f"Error processing {file_path}: {e}")
                     has_errors = True
@@ -151,6 +153,7 @@ def main():
         with open(LOCK_FILE, 'w') as f:
             json.dump(lock_data, f, indent=2, sort_keys=True)
         print(f"Updated {LOCK_FILE}")
+        print(locked_files)
 
     if has_errors:
         print("Build locking failed with errors.")
