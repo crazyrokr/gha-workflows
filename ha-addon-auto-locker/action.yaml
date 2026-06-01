@@ -53,9 +53,8 @@ runs:
       shell: bash
       run: |
         LOCKED_FILES=$(python3 ${{ github.action_path }}/lock.py ${{ inputs.lookup_sources }} | tee /dev/stderr | tail -n 1)
-        cat .github/docker-lock.json
+        sed -i ':a;/^[ \n]*$/{$d;N;ba}' .github/docker-lock.json
         echo >> .github/docker-lock.json
-        cat .github/docker-lock.json
         echo "locked_files=$LOCKED_FILES" >> $GITHUB_OUTPUT
 
     - name: Pull and Check for changes
