@@ -53,6 +53,7 @@ runs:
       shell: bash
       run: |
         LOCKED_FILES=$(python3 ${{ github.action_path }}/lock.py ${{ inputs.lookup_sources }} | tee /dev/stderr | tail -n 1)
+        echo >> .github/docker-lock.json
         echo "locked_files=$LOCKED_FILES" >> $GITHUB_OUTPUT
 
     - name: Pull and Check for changes
@@ -70,5 +71,5 @@ runs:
       uses: stefanzweifel/git-auto-commit-action@v7
       with:
         branch: ${{ steps.branch-name.outputs.branch }}
-        commit_message: "pin docker digests in build.yaml"
+        commit_message: "digests' pinnig in ${{ steps.locker.outputs.locked_files }}"
         file_pattern: "${{ steps.locker.outputs.locked_files }} .github/docker-lock.json"
