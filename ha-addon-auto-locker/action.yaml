@@ -71,4 +71,4 @@ runs:
       with:
         branch: ${{ steps.branch-name.outputs.branch }}
         commit_message: "pin docker digests in build.yaml"
-        file_pattern: "${{ steps.locker.outputs.locked_files }} docker-lock.json"
+        file_pattern: "${{ steps.locker.outputs.locked_files }} .github/docker-lock.json"
