@@ -3,6 +3,7 @@ import re
 import subprocess
 import json
 
+MONITOR_FILES = ['build.yaml', 'Dockerfile']
 LOCK_FILE = "docker-lock.json"
 
 ARCH_MAP = {
@@ -116,15 +117,16 @@ def main():
     any_yaml_changed = False
     has_errors = False
     for root, dirs, files in os.walk('.'):
-        if 'build.yaml' in files:
-            file_path = os.path.join(root, 'build.yaml')
-            print(f"Processing {file_path}...")
-            try:
-                if lock_build_yaml(file_path, lock_data):
-                    any_yaml_changed = True
-            except RuntimeError as e:
-                print(f"Error processing {file_path}: {e}")
-                has_errors = True
+        for target in MONITOR_FILES:
+            if target in files:
+                file_path = os.path.join(root, target)
+                print(f"Processing {file_path}...")
+                try:
+                    if lock_build_yaml(file_path, lock_data):
+                        any_yaml_changed = True
+                except RuntimeError as e:
+                    print(f"Error processing {file_path}: {e}")
+                    has_errors = True
 
     # Only save the central lock file if data actually changed
     if lock_data != original_lock_data or any_yaml_changed:
