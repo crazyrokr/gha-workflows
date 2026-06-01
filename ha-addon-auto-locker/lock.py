@@ -97,7 +97,8 @@ def lock_build_yaml(file_path, lock_data):
             changes_made = True
 
     if errors:
-        raise RuntimeError("\n".join(errors))
+        print("\n".join(errors))
+        return False
 
     if changes_made:
         with open(file_path, 'w') as f:
