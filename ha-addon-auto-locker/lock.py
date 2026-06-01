@@ -92,7 +92,10 @@ def lock_build_yaml(file_path, lock_data):
             # Replace image:tag with image:tag@sha256:digest
             old_str = f'"{full_ref}"'
             new_str = f'"{full_ref}@{digest}"'
+            print(f"old_str: {old_str} new_str: {new_str}")
+            print(f"content was: {new_content}")
             new_content = new_content.replace(old_str, new_str)
+            print(f"content became: {new_content}")
             lock_data[full_ref] = digest
             changes_made = True
 
