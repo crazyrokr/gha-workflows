@@ -153,7 +153,7 @@ def main():
         with open(LOCK_FILE, 'w') as f:
             json.dump(lock_data, f, indent=2, sort_keys=True)
         print(f"Updated {LOCK_FILE}")
-        print(locked_files)
+        print(' '.join(locked_files))
 
     if has_errors:
         print("Build locking failed with errors.")
