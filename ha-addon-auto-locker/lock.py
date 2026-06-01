@@ -83,15 +83,15 @@ def lock_build_yaml(file_path, lock_data):
                 continue
             else:
                 print(f"  Updating {arch} pin from {clean_digest} to {digest}")
-                old_str = f'"{full_ref}@{clean_digest}"'
-                new_str = f'"{full_ref}@{digest}"'
+                old_str = f'{full_ref}@{clean_digest}'
+                new_str = f'{full_ref}@{digest}'
                 new_content = new_content.replace(old_str, new_str)
                 lock_data[full_ref] = digest
                 changes_made = True
         else:
             # Replace image:tag with image:tag@sha256:digest
-            old_str = f'"{full_ref}"'
-            new_str = f'"{full_ref}@{digest}"'
+            old_str = f'{full_ref}'
+            new_str = f'{full_ref}@{digest}'
             print(f"old_str: {old_str} new_str: {new_str}")
             print(f"content was: {new_content}")
             new_content = new_content.replace(old_str, new_str)
