@@ -52,7 +52,7 @@ runs:
       id: locker
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/lock.py ${{ inputs.lookup_sources }} > result.txt
+        python3 ${{ github.action_path }}/lock.py ${{ inputs.lookup_sources }} | tee /dev/stderr > result.txt
         LOCKED_FILES=$(tail -n 1 result.txt)
         echo "locked_files=$LOCKED_FILES" >> $GITHUB_OUTPUT
 
