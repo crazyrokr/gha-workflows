@@ -16,8 +16,10 @@ jobs:
     name: Initialize builds
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.filter.outputs.changed }}
-      changed_apps: ${{ steps.filter.outputs.changed_apps }}
+      test: ${{ steps.filter.outputs.test }}
+      build: ${{ steps.filter.outputs.build }}
+      test_apps: ${{ steps.filter.outputs.test_apps }}
+      build_apps: ${{ steps.filter.outputs.build_apps }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v6
@@ -36,41 +38,56 @@ jobs:
           APPS: ${{ steps.apps.outputs.addons }}
           CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
         run: |
-          changed_apps=()
+          apps=()
+          read -ra apps <<< "${APPS}"
 
-          # If the workflow file itself changed, rebuild all apps
-          if [[ "${CHANGED_FILES}" =~ \.github/workflows/ha-addon-[a-z-]+\.yaml ]]; then
-            read -ra changed_apps <<< "${APPS}"
-          else
-            for app in ${APPS}; do
-              for file in ${MONITORED_FILES}; do
-                if [[ "${CHANGED_FILES}" =~ ${app}/${file} ]]; then
-                  changed_apps+=("${app}")
-                  break
-                fi
-              done
+          build_apps=()
+          for app in "${apps[@]}"; do
+            for file in ${MONITORED_FILES}; do
+              if [[ "${CHANGED_FILES}" =~ (^|[[:space:]])${app}/${file} ]]; then
+                build_apps+=("${app}")
+                break
+              fi
             done
+          done
+
+          test_apps=("${build_apps[@]}")
+          if [[ "${CHANGED_FILES}" =~ (^|[[:space:]])tests/ ]]; then
+            test_apps=("${apps[@]}")
           fi
 
-          if [[ ${#changed_apps[@]} -gt 0 ]]; then
-            echo "changed=true"
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "changed_apps=$(jq -nc '$ARGS.positional' --args "${changed_apps[@]}")" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          # A pipeline change is validated end to end: test and rebuild all apps
+          if [[ "${CHANGED_FILES}" =~ (^|[[:space:]])\.github/workflows/ ]]; then
+            test_apps=("${apps[@]}")
+            build_apps=("${apps[@]}")
           fi
+
+          for kind in test build; do
+            case "${kind}" in
+              test) selected=("${test_apps[@]}") ;;
+              build) selected=("${build_apps[@]}") ;;
+            esac
+            if [[ ${#selected[@]} -gt 0 ]]; then
+              echo "${kind}=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "${kind}=false" >> "$GITHUB_OUTPUT"
+            fi
+            echo "${kind}_apps=$(jq -nc '$ARGS.positional' --args "${selected[@]}")" >> "$GITHUB_OUTPUT"
+          done
+
+          echo "Apps to test: ${test_apps[*]:-none}"
+          echo "Apps to build: ${build_apps[*]:-none}"
 
   test-app:
     name: Test ${{ matrix.app }}
     needs: init
-    if: needs.init.outputs.changed == 'true'
+    if: needs.init.outputs.test == 'true'
     permissions:
       contents: read
     strategy:
       fail-fast: true
       matrix:
-        app: ${{ fromJSON(needs.init.outputs.changed_apps) }}
+        app: ${{ fromJSON(needs.init.outputs.test_apps) }}
     uses: ./.github/workflows/ha-addon-test.yaml
     with:
       app: ${{ matrix.app }}
@@ -78,7 +95,7 @@ jobs:
   build-app:
     name: Build ${{ matrix.app }}
     needs: [init, test-app]
-    if: needs.init.outputs.changed == 'true'
+    if: needs.init.outputs.build == 'true'
     permissions:
       contents: read
       id-token: write
@@ -86,7 +103,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: ${{ fromJSON(needs.init.outputs.changed_apps) }}
+        app: ${{ fromJSON(needs.init.outputs.build_apps) }}
     uses: ./.github/workflows/ha-addon-build.yaml
     with:
       app: ${{ matrix.app }}
