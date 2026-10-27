@@ -39,8 +39,8 @@ jobs:
           changed_apps=()
 
           # If the workflow file itself changed, rebuild all apps
-          if [[ "${CHANGED_FILES}" =~ \.github/workflows/(builder|build-app)\.yaml ]]; then
-            changed_apps=(${APPS})
+          if [[ "${CHANGED_FILES}" =~ \.github/workflows/ha-addon-[a-z-]+\.yaml ]]; then
+            read -ra changed_apps <<< "${APPS}"
           else
             for app in ${APPS}; do
               for file in ${MONITORED_FILES}; do
@@ -61,9 +61,23 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
+  test-app:
+    name: Test ${{ matrix.app }}
+    needs: init
+    if: needs.init.outputs.changed == 'true'
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        app: ${{ fromJSON(needs.init.outputs.changed_apps) }}
+    uses: ./.github/workflows/ha-addon-test.yaml
+    with:
+      app: ${{ matrix.app }}
+
   build-app:
     name: Build ${{ matrix.app }}
-    needs: init
+    needs: [init, test-app]
     if: needs.init.outputs.changed == 'true'
     permissions:
       contents: read
