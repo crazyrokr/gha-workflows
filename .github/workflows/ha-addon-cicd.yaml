@@ -5,6 +5,12 @@ env:
 
 on:
   workflow_call:
+    inputs:
+      force_build:
+        description: Test, build and publish every app regardless of the changed files
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -37,6 +43,7 @@ jobs:
         env:
           APPS: ${{ steps.apps.outputs.addons }}
           CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
+          FORCE_BUILD: ${{ inputs.force_build }}
         run: |
           apps=()
           read -ra apps <<< "${APPS}"
@@ -58,6 +65,12 @@ jobs:
 
           # A pipeline change is validated end to end: test and rebuild all apps
           if [[ "${CHANGED_FILES}" =~ (^|[[:space:]])\.github/workflows/ ]]; then
+            test_apps=("${apps[@]}")
+            build_apps=("${apps[@]}")
+          fi
+
+          # A forced run ignores the changed files entirely
+          if [[ "${FORCE_BUILD}" == "true" ]]; then
             test_apps=("${apps[@]}")
             build_apps=("${apps[@]}")
           fi
@@ -107,5 +120,5 @@ jobs:
     uses: ./.github/workflows/ha-addon-build.yaml
     with:
       app: ${{ matrix.app }}
-      publish: ${{ github.event_name == 'push' }}
+      publish: ${{ github.event_name == 'push' || inputs.force_build }}
     secrets: inherit
